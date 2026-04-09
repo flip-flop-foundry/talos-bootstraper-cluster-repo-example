@@ -1,0 +1,3 @@
+[submodule "talos-bootstraper"]
+	path = talos-bootstraper
+	url = https://github.com/flip-flop-foundry/talos-bootstraper
