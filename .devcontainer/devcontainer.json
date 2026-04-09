@@ -1,0 +1,29 @@
+{
+  "name": "Tuborgnetes",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "timonwong.shellcheck",
+        "mads-hartmann.bash-ide-vscode",
+        "redhat.vscode-yaml",
+        "mhutchie.git-graph",
+        "ms-kubernetes-tools.vscode-kubernetes-tools"
+      ]
+    }
+  },
+  "mounts": [
+    "source=tuborgnetes-bw-login,target=/home/vscode/.config/Bitwarden CLI,type=volume"
+  ],
+  "remoteEnv": {
+    "RENV_CACHE_MAX_AGE": "5m"
+  },
+  "remoteUser": "vscode",
+  "postCreateCommand": ".devcontainer/install-tools.sh /workspaces/tuborgnetes",
+  "postStartCommand": "grep -q 'envoke shell-init' ~/.zshrc 2>/dev/null || echo 'eval \"$(envoke shell-init)\"' >> ~/.zshrc"
+}
