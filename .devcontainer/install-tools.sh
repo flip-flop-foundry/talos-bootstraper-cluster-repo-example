@@ -37,47 +37,156 @@ YQ_VERSION="${YQ_VERSION:-v4.45.4}"
 # Cilium CLI version != Cilium Helm chart version; pin CLI separately
 CILIUM_CLI_VERSION="${CILIUM_CLI_VERSION:-v0.19.1}"
 
+K9S_VERSION="${K9S_VERSION:-v0.50.18}"
+ARGOCD_VERSION="${ARGOCD_VERSION:-v3.3.6}"
+CMCTL_VERSION="${CMCTL_VERSION:-v2.4.1}"
+VIRTCTL_VERSION="${VIRTCTL_VERSION:-v1.8.1}"
+
 log_step()  { echo "⏳ $*"; }
 log_ok()    { echo "✅ $*"; }
+log_skip()  { echo "⏭️  $*"; }
 log_compl() { echo "   📝 completions: bash + zsh"; }
 
-echo "🔧 Installing tools for linux/${ARCH}:"
+# Installs a tool only if it's missing or at a different version.
+# Usage: needs_install <binary> <wanted_version> <actual_version_cmd>
+# Returns 0 (install needed) or 1 (already correct).
+needs_install() {
+  local bin="$1" wanted="$2" version_cmd="$3"
+  if ! command -v "$bin" &>/dev/null; then
+    return 0  # not installed
+  fi
+  local actual
+  actual=$(eval "$version_cmd" 2>/dev/null || true)
+  if [[ "$actual" != *"${wanted#v}"* ]]; then
+    return 0  # wrong version
+  fi
+  return 1  # already correct
+}
+
+echo "🔧 Tool versions for linux/${ARCH}:"
 echo "   kubectl      ${KUBECTL_VERSION}"
 echo "   helm         ${HELM_VERSION}"
 echo "   talosctl     ${TALOSCTL_VERSION}"
 echo "   yq           ${YQ_VERSION}"
 echo "   cilium-cli   ${CILIUM_CLI_VERSION}"
+echo "   k9s          ${K9S_VERSION}"
+echo "   argocd       ${ARGOCD_VERSION}"
+echo "   cmctl        ${CMCTL_VERSION}"
+echo "   virtctl      ${VIRTCTL_VERSION}"
+echo "   helm-diff    (helm plugin)"
 echo ""
 
 # --- kubectl ---
-log_step "kubectl ${KUBECTL_VERSION}..."
-sudo curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl" -o /usr/local/bin/kubectl
-sudo chmod +x /usr/local/bin/kubectl
-log_ok "kubectl $(kubectl version --client -o json | jq -r .clientVersion.gitVersion) installed"
+if needs_install kubectl "$KUBECTL_VERSION" "kubectl version --client -o json | jq -r .clientVersion.gitVersion"; then
+  log_step "kubectl ${KUBECTL_VERSION}..."
+  sudo curl -fsSL "https://dl.k8s.io/release/${KUBECTL_VERSION}/bin/linux/${ARCH}/kubectl" -o /usr/local/bin/kubectl
+  sudo chmod +x /usr/local/bin/kubectl
+  log_ok "kubectl $(kubectl version --client -o json | jq -r .clientVersion.gitVersion) installed"
+else
+  log_skip "kubectl ${KUBECTL_VERSION} already installed"
+fi
 
 # --- helm ---
-log_step "helm ${HELM_VERSION}..."
-curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH}.tar.gz" | sudo tar xz --strip-components=1 -C /usr/local/bin "linux-${ARCH}/helm"
-sudo chmod +x /usr/local/bin/helm
-log_ok "helm $(helm version --short) installed"
+if needs_install helm "$HELM_VERSION" "helm version --short"; then
+  log_step "helm ${HELM_VERSION}..."
+  curl -fsSL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH}.tar.gz" | sudo tar xz --strip-components=1 -C /usr/local/bin "linux-${ARCH}/helm"
+  sudo chmod +x /usr/local/bin/helm
+  log_ok "helm $(helm version --short) installed"
+else
+  log_skip "helm ${HELM_VERSION} already installed"
+fi
 
 # --- talosctl ---
-log_step "talosctl ${TALOSCTL_VERSION}..."
-sudo curl -fsSL "https://github.com/siderolabs/talos/releases/download/${TALOSCTL_VERSION}/talosctl-linux-${ARCH}" -o /usr/local/bin/talosctl
-sudo chmod +x /usr/local/bin/talosctl
-log_ok "talosctl $(talosctl version --client --short 2>/dev/null | head -1) installed"
+if needs_install talosctl "$TALOSCTL_VERSION" "talosctl version --client --short 2>/dev/null | head -1"; then
+  log_step "talosctl ${TALOSCTL_VERSION}..."
+  sudo curl -fsSL "https://github.com/siderolabs/talos/releases/download/${TALOSCTL_VERSION}/talosctl-linux-${ARCH}" -o /usr/local/bin/talosctl
+  sudo chmod +x /usr/local/bin/talosctl
+  log_ok "talosctl $(talosctl version --client --short 2>/dev/null | head -1) installed"
+else
+  log_skip "talosctl ${TALOSCTL_VERSION} already installed"
+fi
 
 # --- yq (mikefarah) ---
-log_step "yq ${YQ_VERSION}..."
-sudo curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}" -o /usr/local/bin/yq
-sudo chmod +x /usr/local/bin/yq
-log_ok "yq $(yq --version) installed"
+if needs_install yq "$YQ_VERSION" "yq --version"; then
+  log_step "yq ${YQ_VERSION}..."
+  sudo curl -fsSL "https://github.com/mikefarah/yq/releases/download/${YQ_VERSION}/yq_linux_${ARCH}" -o /usr/local/bin/yq
+  sudo chmod +x /usr/local/bin/yq
+  log_ok "yq $(yq --version) installed"
+else
+  log_skip "yq ${YQ_VERSION} already installed"
+fi
 
 # --- cilium-cli ---
-log_step "cilium-cli ${CILIUM_CLI_VERSION}..."
-curl -fsSL "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${ARCH}.tar.gz" | sudo tar xz -C /usr/local/bin
-sudo chmod +x /usr/local/bin/cilium
-log_ok "cilium $(cilium version --client 2>/dev/null | head -1) installed"
+if needs_install cilium "$CILIUM_CLI_VERSION" "cilium version --client 2>/dev/null | head -1"; then
+  log_step "cilium-cli ${CILIUM_CLI_VERSION}..."
+  curl -fsSL "https://github.com/cilium/cilium-cli/releases/download/${CILIUM_CLI_VERSION}/cilium-linux-${ARCH}.tar.gz" | sudo tar xz -C /usr/local/bin
+  sudo chmod +x /usr/local/bin/cilium
+  log_ok "cilium $(cilium version --client 2>/dev/null | head -1) installed"
+else
+  log_skip "cilium-cli ${CILIUM_CLI_VERSION} already installed"
+fi
+
+# --- k9s ---
+if needs_install k9s "$K9S_VERSION" "k9s version --short 2>/dev/null | grep Version | awk '{print \$2}'"; then
+  log_step "k9s ${K9S_VERSION}..."
+  curl -fsSL "https://github.com/derailed/k9s/releases/download/${K9S_VERSION}/k9s_Linux_${ARCH}.tar.gz" | sudo tar xz -C /usr/local/bin k9s
+  sudo chmod +x /usr/local/bin/k9s
+  log_ok "k9s $(k9s version --short 2>/dev/null | grep Version | awk '{print $2}') installed"
+else
+  log_skip "k9s ${K9S_VERSION} already installed"
+fi
+
+# --- argocd CLI ---
+if needs_install argocd "$ARGOCD_VERSION" "argocd version --client --short 2>/dev/null | head -1"; then
+  log_step "argocd ${ARGOCD_VERSION}..."
+  sudo curl -fsSL "https://github.com/argoproj/argo-cd/releases/download/${ARGOCD_VERSION}/argocd-linux-${ARCH}" -o /usr/local/bin/argocd
+  sudo chmod +x /usr/local/bin/argocd
+  log_ok "argocd $(argocd version --client --short 2>/dev/null | head -1) installed"
+else
+  log_skip "argocd ${ARGOCD_VERSION} already installed"
+fi
+
+# --- cmctl (cert-manager CLI) ---
+if needs_install cmctl "$CMCTL_VERSION" "cmctl version --client 2>/dev/null | head -1"; then
+  log_step "cmctl ${CMCTL_VERSION}..."
+  sudo curl -fsSL "https://github.com/cert-manager/cmctl/releases/download/${CMCTL_VERSION}/cmctl_linux_${ARCH}" -o /usr/local/bin/cmctl
+  sudo chmod +x /usr/local/bin/cmctl
+  log_ok "cmctl $(cmctl version --client 2>/dev/null | head -1) installed"
+else
+  log_skip "cmctl ${CMCTL_VERSION} already installed"
+fi
+
+# --- virtctl (KubeVirt CLI) ---
+if needs_install virtctl "$VIRTCTL_VERSION" "virtctl version --client 2>/dev/null | head -1"; then
+  log_step "virtctl ${VIRTCTL_VERSION}..."
+  sudo curl -fsSL "https://github.com/kubevirt/kubevirt/releases/download/${VIRTCTL_VERSION}/virtctl-v${VIRTCTL_VERSION#v}-linux-${ARCH}" -o /usr/local/bin/virtctl
+  sudo chmod +x /usr/local/bin/virtctl
+  log_ok "virtctl $(virtctl version --client 2>/dev/null | head -1) installed"
+else
+  log_skip "virtctl ${VIRTCTL_VERSION} already installed"
+fi
+
+# --- helm-diff (helm plugin) ---
+if ! helm plugin list 2>/dev/null | grep -q '^diff'; then
+  log_step "helm-diff..."
+  helm plugin install https://github.com/databus23/helm-diff
+  log_ok "helm-diff $(helm plugin list | grep '^diff' | awk '{print $2}') installed"
+else
+  log_skip "helm-diff already installed"
+fi
+
+# --- k9s plugins ---
+echo ""
+log_step "Installing k9s plugins..."
+K9S_PLUGINS_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/k9s/plugins"
+mkdir -p "$K9S_PLUGINS_DIR"
+K9S_PLUGINS_BASE="https://raw.githubusercontent.com/derailed/k9s/master/plugins"
+
+for plugin in argocd cert-manager helm-diff liveMigration; do
+  dest="$K9S_PLUGINS_DIR/${plugin}.yaml"
+  curl -fsSL "${K9S_PLUGINS_BASE}/${plugin}.yaml" -o "$dest"
+  log_ok "k9s plugin: ${plugin}"
+done
 
 # --- Shell completions (bash + zsh) ---
 echo ""
@@ -103,6 +212,18 @@ log_compl "cilium"
 yq shell-completion bash | sudo tee /usr/local/share/bash-completion/completions/yq > /dev/null
 yq shell-completion zsh  | sudo tee /usr/local/share/zsh/site-functions/_yq > /dev/null
 log_compl "yq"
+
+k9s completion bash      | sudo tee /usr/local/share/bash-completion/completions/k9s > /dev/null
+k9s completion zsh       | sudo tee /usr/local/share/zsh/site-functions/_k9s > /dev/null
+log_compl "k9s"
+
+argocd completion bash   | sudo tee /usr/local/share/bash-completion/completions/argocd > /dev/null
+argocd completion zsh    | sudo tee /usr/local/share/zsh/site-functions/_argocd > /dev/null
+log_compl "argocd"
+
+cmctl completion bash    | sudo tee /usr/local/share/bash-completion/completions/cmctl > /dev/null
+cmctl completion zsh     | sudo tee /usr/local/share/zsh/site-functions/_cmctl > /dev/null
+log_compl "cmctl"
 
 echo ""
 echo "✅ All tools installed and completions generated."

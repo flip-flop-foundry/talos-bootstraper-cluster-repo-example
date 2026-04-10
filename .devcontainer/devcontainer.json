@@ -17,11 +17,13 @@
       ]
     }
   },
+  "initializeCommand": "mkdir -p ~/.copilot",
   "mounts": [
-    "source=tuborgnetes-bw-login,target=/home/vscode/.config/Bitwarden CLI,type=volume"
+    "source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot,type=bind,consistency=cached"
   ],
   "remoteEnv": {
-    "RENV_CACHE_MAX_AGE": "5m"
+    "KUBECONFIG": "/workspaces/tuborgnetes/.vscode/current/kubeconfig",
+    "TALOSCONFIG": "/workspaces/tuborgnetes/.vscode/current/talosconfig"
   },
   "remoteUser": "vscode",
   "postCreateCommand": ".devcontainer/install-tools.sh /workspaces/tuborgnetes",
