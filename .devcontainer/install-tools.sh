@@ -7,16 +7,28 @@ set -euo pipefail
 WORKSPACE="${1:-.}"
 ARCH=$(dpkg --print-architecture)
 
-# --- Resolve env file from .vscode/tasks.json (first option in inputs) ---
-TASKS_JSON="$WORKSPACE/.vscode/tasks.json"
-if [[ -f "$TASKS_JSON" ]]; then
-  ENV_FILE_REL=$(jq -r '.inputs[] | select(.id == "envFile") | .options[0]' "$TASKS_JSON")
-  ENV_FILE="$WORKSPACE/$ENV_FILE_REL"
+# --- Resolve env file ---
+# Reuse the last selection saved by the VS Code task picker, or ask interactively.
+SELECTED_ENV_CACHE="$WORKSPACE/.vscode/current/selected-env"
+if [[ -f "$SELECTED_ENV_CACHE" && -s "$SELECTED_ENV_CACHE" ]]; then
+  _cached=$(tr -d '[:space:]' < "$SELECTED_ENV_CACHE")
+  # Task picker saves relative paths; resolve to absolute
+  [[ "$_cached" = /* ]] && ENV_FILE="$_cached" || ENV_FILE="$WORKSPACE/$_cached"
 else
-  ENV_FILE=""
+  mapfile -t _ENV_OPTIONS < <(find "$WORKSPACE/overlays" -maxdepth 2 -name '*.env' | sort)
+  if [[ ${#_ENV_OPTIONS[@]} -eq 0 ]]; then
+    ENV_FILE=""
+  elif [[ ${#_ENV_OPTIONS[@]} -eq 1 || ! -t 0 ]]; then
+    ENV_FILE="${_ENV_OPTIONS[0]}"
+  else
+    echo "🔍 Multiple overlay env files found. Select one:"
+    select ENV_FILE in "${_ENV_OPTIONS[@]}"; do
+      [[ -n "$ENV_FILE" ]] && break
+    done
+  fi
 fi
 
-if [[ -z "$ENV_FILE" ]]; then
+if [[ -z "$ENV_FILE" || ! -f "$ENV_FILE" ]]; then
   echo "⚠️  No overlay .env file found under overlays/. Installing tools with fallback versions."
   KUBERNETES_VERSION="1.35.0"
   TALOS_INSTALL_VERSION="v1.12.4"
