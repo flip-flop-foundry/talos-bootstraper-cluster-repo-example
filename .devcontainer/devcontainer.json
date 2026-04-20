@@ -14,7 +14,8 @@
         "redhat.vscode-yaml",
         "mhutchie.git-graph",
         "ms-kubernetes-tools.vscode-kubernetes-tools",
-        "augustocdias.tasks-shell-input"
+        "augustocdias.tasks-shell-input",
+        "GitHub.copilot-chat"
       ]
     }
   },
@@ -27,6 +28,5 @@
     "TALOSCONFIG": "${containerWorkspaceFolder}/.vscode/current/talosconfig"
   },
   "remoteUser": "vscode",
-  "postCreateCommand": ".devcontainer/install-tools.sh ${containerWorkspaceFolder}",
-  "postStartCommand": "grep -q 'envoke shell-init' ~/.zshrc 2>/dev/null || echo 'eval \"$(envoke shell-init)\"' >> ~/.zshrc"
+  "postCreateCommand": ".devcontainer/install-tools.sh ${containerWorkspaceFolder}"
 }
