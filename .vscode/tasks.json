@@ -4,8 +4,7 @@
     {
       "label": "Render Overlay",
       "type": "shell",
-      "command": "${workspaceFolder}/talos-bootstraper/adminTasks/render-overlay.sh",
-      "args": ["${input:envFile}"],
+      "command": "mkdir -p \"${workspaceFolder}/.vscode/current\" && echo -n \"${input:envFile}\" > \"${workspaceFolder}/.vscode/current/selected-env\" && ${workspaceFolder}/talos-bootstraper/adminTasks/render-overlay.sh \"${input:envFile}\"",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -17,8 +16,7 @@
     {
       "label": "Apply Overlay",
       "type": "shell",
-      "command": "${workspaceFolder}/talos-bootstraper/adminTasks/cluster-bootstrap.sh",
-      "args": ["${input:envFile}"],
+      "command": "mkdir -p \"${workspaceFolder}/.vscode/current\" && echo -n \"${input:envFile}\" > \"${workspaceFolder}/.vscode/current/selected-env\" && ${workspaceFolder}/talos-bootstraper/adminTasks/cluster-bootstrap.sh \"${input:envFile}\"",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -32,8 +30,7 @@
       "dependsOn": ["Render Overlay"],
       "dependsOrder": "sequence",
       "type": "shell",
-      "command": "${workspaceFolder}/talos-bootstraper/adminTasks/push-to-gitea.sh",
-      "args": ["${input:envFile}"],
+      "command": "mkdir -p \"${workspaceFolder}/.vscode/current\" && echo -n \"${input:envFile}\" > \"${workspaceFolder}/.vscode/current/selected-env\" && ${workspaceFolder}/talos-bootstraper/adminTasks/push-to-gitea.sh \"${input:envFile}\"",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -45,8 +42,7 @@
     {
       "label": "Apply Talos configs",
       "type": "shell",
-      "command": "${workspaceFolder}/talos-bootstraper/adminTasks/cluster-initialSetup.sh",
-      "args": ["${input:envFile}"],
+      "command": "mkdir -p \"${workspaceFolder}/.vscode/current\" && echo -n \"${input:envFile}\" > \"${workspaceFolder}/.vscode/current/selected-env\" && ${workspaceFolder}/talos-bootstraper/adminTasks/cluster-initialSetup.sh \"${input:envFile}\"",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -58,11 +54,7 @@
     {
       "label": "Set Active Talos/Kube Context",
       "type": "shell",
-      "command": "${workspaceFolder}/talos-bootstraper/.vscode/tasks/set-active-talos-kube-context.sh",
-      "args": [
-        "${input:envFile}",
-        "${workspaceFolder}"
-      ],
+      "command": "mkdir -p \"${workspaceFolder}/.vscode/current\" && echo -n \"${input:envFile}\" > \"${workspaceFolder}/.vscode/current/selected-env\" && ${workspaceFolder}/talos-bootstraper/.vscode/tasks/set-active-talos-kube-context.sh \"${input:envFile}\" \"${workspaceFolder}\"",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -74,8 +66,7 @@
     {
       "label": "Reset Talos Node System Volumes",
       "type": "shell",
-      "command": "${workspaceFolder}/talos-bootstraper/.vscode/tasks/reset-talos-nodes.sh",
-      "args": ["${input:envFile}"],
+      "command": "mkdir -p \"${workspaceFolder}/.vscode/current\" && echo -n \"${input:envFile}\" > \"${workspaceFolder}/.vscode/current/selected-env\" && ${workspaceFolder}/talos-bootstraper/.vscode/tasks/reset-talos-nodes.sh \"${input:envFile}\"",
       "group": "build",
       "presentation": {
         "reveal": "always",
@@ -89,13 +80,15 @@
   "inputs": [
     {
       "id": "envFile",
-      "type": "pickString",
-      "description": "Select the overlay env file to use. The first one will be used when setting up tools in devcontainer",
-      "default": "overlays/yourCluster-l2/yourCluster-l2.env",
-      "options": [
-        "overlays/yourCluster-l2/yourCluster-l2.env",
-        "overlays/tuborgnetes/tuborgnetes.env"
-      ]
+      "type": "command",
+      "command": "shellCommand.execute",
+      "args": {
+        "command": "find overlays -maxdepth 2 -name '*.env' | sort",
+        "cwd": "${workspaceFolder}",
+        "description": "Select the overlay env file to use. The first one will be used when setting up tools in devcontainer",
+        "rememberPrevious": true,
+        "rememberAs": "envFile"
+      }
     }
   ]
 }

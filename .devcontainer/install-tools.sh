@@ -7,16 +7,28 @@ set -euo pipefail
 WORKSPACE="${1:-.}"
 ARCH=$(dpkg --print-architecture)
 
-# --- Resolve env file from .vscode/tasks.json (first option in inputs) ---
-TASKS_JSON="$WORKSPACE/.vscode/tasks.json"
-if [[ -f "$TASKS_JSON" ]]; then
-  ENV_FILE_REL=$(jq -r '.inputs[] | select(.id == "envFile") | .options[0]' "$TASKS_JSON")
-  ENV_FILE="$WORKSPACE/$ENV_FILE_REL"
+# --- Resolve env file ---
+# Reuse the last selection saved by the VS Code task picker, or ask interactively.
+SELECTED_ENV_CACHE="$WORKSPACE/.vscode/current/selected-env"
+if [[ -f "$SELECTED_ENV_CACHE" && -s "$SELECTED_ENV_CACHE" ]]; then
+  _cached=$(tr -d '[:space:]' < "$SELECTED_ENV_CACHE")
+  # Task picker saves relative paths; resolve to absolute
+  [[ "$_cached" = /* ]] && ENV_FILE="$_cached" || ENV_FILE="$WORKSPACE/$_cached"
 else
-  ENV_FILE=""
+  mapfile -t _ENV_OPTIONS < <(find "$WORKSPACE/overlays" -maxdepth 2 -name '*.env' | sort)
+  if [[ ${#_ENV_OPTIONS[@]} -eq 0 ]]; then
+    ENV_FILE=""
+  elif [[ ${#_ENV_OPTIONS[@]} -eq 1 || ! -t 0 ]]; then
+    ENV_FILE="${_ENV_OPTIONS[0]}"
+  else
+    echo "🔍 Multiple overlay env files found. Select one:"
+    select ENV_FILE in "${_ENV_OPTIONS[@]}"; do
+      [[ -n "$ENV_FILE" ]] && break
+    done
+  fi
 fi
 
-if [[ -z "$ENV_FILE" ]]; then
+if [[ -z "$ENV_FILE" || ! -f "$ENV_FILE" ]]; then
   echo "⚠️  No overlay .env file found under overlays/. Installing tools with fallback versions."
   KUBERNETES_VERSION="1.35.0"
   TALOS_INSTALL_VERSION="v1.12.4"
@@ -41,6 +53,7 @@ K9S_VERSION="${K9S_VERSION:-v0.50.18}"
 ARGOCD_VERSION="${ARGOCD_VERSION:-v3.3.6}"
 CMCTL_VERSION="${CMCTL_VERSION:-v2.4.1}"
 VIRTCTL_VERSION="${VIRTCTL_VERSION:-v1.8.1}"
+COPILOT_CLI_VERSION="${COPILOT_CLI_VERSION:-v1.0.31}"
 
 log_step()  { echo "⏳ $*"; }
 log_ok()    { echo "✅ $*"; }
@@ -73,6 +86,7 @@ echo "   k9s          ${K9S_VERSION}"
 echo "   argocd       ${ARGOCD_VERSION}"
 echo "   cmctl        ${CMCTL_VERSION}"
 echo "   virtctl      ${VIRTCTL_VERSION}"
+echo "   copilot-cli  ${COPILOT_CLI_VERSION}"
 echo "   helm-diff    (helm plugin)"
 echo ""
 
@@ -166,6 +180,25 @@ else
   log_skip "virtctl ${VIRTCTL_VERSION} already installed"
 fi
 
+# --- GitHub Copilot CLI ---
+# Copilot release assets use 'x64' for amd64 and 'arm64' for arm64.
+case "$ARCH" in
+  amd64)   COPILOT_ARCH="x64"   ;;
+  arm64)   COPILOT_ARCH="arm64" ;;
+  *)       echo "⚠️  Unsupported arch for copilot-cli: ${ARCH}"; COPILOT_ARCH="" ;;
+esac
+if [[ -z "$COPILOT_ARCH" ]]; then
+  log_skip "copilot-cli (unsupported arch: ${ARCH})"
+elif needs_install copilot "$COPILOT_CLI_VERSION" "copilot --version"; then
+  log_step "copilot-cli ${COPILOT_CLI_VERSION}..."
+  curl -fsSL "https://github.com/github/copilot-cli/releases/download/${COPILOT_CLI_VERSION}/copilot-linux-${COPILOT_ARCH}.tar.gz" \
+    | sudo tar xz -C /usr/local/bin copilot
+  sudo chmod +x /usr/local/bin/copilot
+  log_ok "copilot $(copilot --version 2>/dev/null || true) installed"
+else
+  log_skip "copilot-cli ${COPILOT_CLI_VERSION} already installed"
+fi
+
 # --- helm-diff (helm plugin) ---
 if ! helm plugin list 2>/dev/null | grep -q '^diff'; then
   log_step "helm-diff..."
@@ -225,5 +258,30 @@ cmctl completion bash    | sudo tee /usr/local/share/bash-completion/completions
 cmctl completion zsh     | sudo tee /usr/local/share/zsh/site-functions/_cmctl > /dev/null
 log_compl "cmctl"
 
+if copilot completion bash > /dev/null 2>&1; then
+  copilot completion bash | sudo tee /usr/local/share/bash-completion/completions/copilot > /dev/null
+  copilot completion zsh  | sudo tee /usr/local/share/zsh/site-functions/_copilot > /dev/null
+  log_compl "copilot"
+fi
+
 echo ""
-echo "✅ All tools installed and completions generated."
+log_step "Configuring shell aliases..."
+
+ensure_alias_line() {
+  local shell_rc="$1"
+  local alias_line="$2"
+  touch "$shell_rc"
+  if ! grep -Fqx "$alias_line" "$shell_rc"; then
+    echo "$alias_line" >> "$shell_rc"
+  fi
+}
+
+ensure_alias_line "$HOME/.bashrc" "alias k='kubectl'"
+ensure_alias_line "$HOME/.bashrc" "alias t='talosctl'"
+ensure_alias_line "$HOME/.zshrc" "alias k='kubectl'"
+ensure_alias_line "$HOME/.zshrc" "alias t='talosctl'"
+
+log_ok "aliases configured: k -> kubectl, t -> talosctl"
+
+echo ""
+echo "✅ All tools installed, completions generated, and aliases configured."

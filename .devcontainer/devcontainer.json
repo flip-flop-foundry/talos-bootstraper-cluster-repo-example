@@ -13,7 +13,9 @@
         "mads-hartmann.bash-ide-vscode",
         "redhat.vscode-yaml",
         "mhutchie.git-graph",
-        "ms-kubernetes-tools.vscode-kubernetes-tools"
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "augustocdias.tasks-shell-input",
+        "GitHub.copilot-chat"
       ]
     }
   },
@@ -22,10 +24,9 @@
     "source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot,type=bind,consistency=cached"
   ],
   "remoteEnv": {
-    "KUBECONFIG": "/workspaces/tuborgnetes/.vscode/current/kubeconfig",
-    "TALOSCONFIG": "/workspaces/tuborgnetes/.vscode/current/talosconfig"
+    "KUBECONFIG": "${containerWorkspaceFolder}/.vscode/current/kubeconfig",
+    "TALOSCONFIG": "${containerWorkspaceFolder}/.vscode/current/talosconfig"
   },
   "remoteUser": "vscode",
-  "postCreateCommand": ".devcontainer/install-tools.sh /workspaces/tuborgnetes",
-  "postStartCommand": "grep -q 'envoke shell-init' ~/.zshrc 2>/dev/null || echo 'eval \"$(envoke shell-init)\"' >> ~/.zshrc"
+  "postCreateCommand": ".devcontainer/install-tools.sh ${containerWorkspaceFolder}"
 }
