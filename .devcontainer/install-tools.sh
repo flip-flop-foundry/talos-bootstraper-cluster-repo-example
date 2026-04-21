@@ -54,6 +54,7 @@ ARGOCD_VERSION="${ARGOCD_VERSION:-v3.3.6}"
 CMCTL_VERSION="${CMCTL_VERSION:-v2.4.1}"
 VIRTCTL_VERSION="${VIRTCTL_VERSION:-v1.8.1}"
 COPILOT_CLI_VERSION="${COPILOT_CLI_VERSION:-v1.0.31}"
+CNPG_VERSION="${CNPG_VERSION:-v1.25.1}"
 
 log_step()  { echo "⏳ $*"; }
 log_ok()    { echo "✅ $*"; }
@@ -87,6 +88,7 @@ echo "   argocd       ${ARGOCD_VERSION}"
 echo "   cmctl        ${CMCTL_VERSION}"
 echo "   virtctl      ${VIRTCTL_VERSION}"
 echo "   copilot-cli  ${COPILOT_CLI_VERSION}"
+echo "   kubectl-cnpg ${CNPG_VERSION}"
 echo "   helm-diff    (helm plugin)"
 echo ""
 
@@ -199,6 +201,19 @@ else
   log_skip "copilot-cli ${COPILOT_CLI_VERSION} already installed"
 fi
 
+# --- kubectl-cnpg plugin ---
+# CNPG releases use x86_64 naming for amd64
+CNPG_ARCH="$([ "$ARCH" = "amd64" ] && echo "x86_64" || echo "$ARCH")"
+if needs_install kubectl-cnpg "$CNPG_VERSION" "kubectl-cnpg version --client 2>/dev/null | head -1"; then
+  log_step "kubectl-cnpg ${CNPG_VERSION}..."
+  curl -fsSL "https://github.com/cloudnative-pg/cloudnative-pg/releases/download/${CNPG_VERSION}/kubectl-cnpg_${CNPG_VERSION#v}_linux_${CNPG_ARCH}.tar.gz" \
+    | sudo tar xz -C /usr/local/bin kubectl-cnpg
+  sudo chmod +x /usr/local/bin/kubectl-cnpg
+  log_ok "kubectl-cnpg ${CNPG_VERSION} installed"
+else
+  log_skip "kubectl-cnpg ${CNPG_VERSION} already installed"
+fi
+
 # --- helm-diff (helm plugin) ---
 if ! helm plugin list 2>/dev/null | grep -q '^diff'; then
   log_step "helm-diff..."
@@ -220,6 +235,11 @@ for plugin in argocd cert-manager helm-diff liveMigration; do
   curl -fsSL "${K9S_PLUGINS_BASE}/${plugin}.yaml" -o "$dest"
   log_ok "k9s plugin: ${plugin}"
 done
+
+# CNPG k9s plugin (hosted by cloudnative-pg.io, not in derailed/k9s repo)
+curl -fsSL "https://cloudnative-pg.io/documentation/1.20/samples/k9s/plugins.yml" \
+  -o "$K9S_PLUGINS_DIR/cnpg.yaml"
+log_ok "k9s plugin: cnpg"
 
 # --- Shell completions (bash + zsh) ---
 echo ""
