@@ -54,6 +54,7 @@ ARGOCD_VERSION="${ARGOCD_VERSION:-v3.3.6}"
 CMCTL_VERSION="${CMCTL_VERSION:-v2.4.1}"
 VIRTCTL_VERSION="${VIRTCTL_VERSION:-v1.8.1}"
 COPILOT_CLI_VERSION="${COPILOT_CLI_VERSION:-v1.0.31}"
+CLAUDE_VERSION="${CLAUDE_VERSION:-latest}"
 CNPG_VERSION="${CNPG_VERSION:-v1.25.1}"
 
 log_step()  { echo "⏳ $*"; }
@@ -88,6 +89,7 @@ echo "   argocd       ${ARGOCD_VERSION}"
 echo "   cmctl        ${CMCTL_VERSION}"
 echo "   virtctl      ${VIRTCTL_VERSION}"
 echo "   copilot-cli  ${COPILOT_CLI_VERSION}"
+echo "   claude-code  ${CLAUDE_VERSION}"
 echo "   kubectl-cnpg ${CNPG_VERSION}"
 echo "   helm-diff    (helm plugin)"
 echo ""
@@ -201,6 +203,20 @@ else
   log_skip "copilot-cli ${COPILOT_CLI_VERSION} already installed"
 fi
 
+# --- Claude Code (Anthropic) ---
+# Installed via npm; requires Node.js (provided by the node devcontainer feature).
+if needs_install claude "${CLAUDE_VERSION#v}" "claude --version 2>/dev/null"; then
+  log_step "claude-code ${CLAUDE_VERSION}..."
+  if [[ "$CLAUDE_VERSION" == "latest" ]]; then
+    npm install -g @anthropic-ai/claude-code
+  else
+    npm install -g "@anthropic-ai/claude-code@${CLAUDE_VERSION#v}"
+  fi
+  log_ok "claude $(claude --version 2>/dev/null || true) installed"
+else
+  log_skip "claude-code ${CLAUDE_VERSION} already installed"
+fi
+
 # --- kubectl-cnpg plugin ---
 # CNPG releases use x86_64 naming for amd64
 CNPG_ARCH="$([ "$ARCH" = "amd64" ] && echo "x86_64" || echo "$ARCH")"
@@ -240,6 +256,11 @@ done
 curl -fsSL "https://cloudnative-pg.io/documentation/1.20/samples/k9s/plugins.yml" \
   -o "$K9S_PLUGINS_DIR/cnpg.yaml"
 log_ok "k9s plugin: cnpg"
+
+# KubeVirt plugin — maintained in .devcontainer alongside this script
+KUBEVIRT_PLUGIN_SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/kubevirt.yaml"
+ln -sf "$KUBEVIRT_PLUGIN_SRC" "$K9S_PLUGINS_DIR/kubevirt.yaml"
+log_ok "k9s plugin: kubevirt (symlinked from .devcontainer)"
 
 # --- Shell completions (bash + zsh) ---
 echo ""

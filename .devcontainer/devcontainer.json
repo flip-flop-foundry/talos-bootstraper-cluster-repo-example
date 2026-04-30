@@ -4,7 +4,10 @@
     "dockerfile": "Dockerfile"
   },
   "features": {
-    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {}
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {},
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "lts"
+    }
   },
   "customizations": {
     "vscode": {
@@ -19,13 +22,21 @@
       ]
     }
   },
-  "initializeCommand": "mkdir -p ~/.copilot",
+  "initializeCommand": "mkdir -p ~/.copilot ~/.claude",
   "mounts": [
-    "source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.copilot,target=/home/vscode/.copilot,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached"
   ],
   "remoteEnv": {
     "KUBECONFIG": "${containerWorkspaceFolder}/.vscode/current/kubeconfig",
     "TALOSCONFIG": "${containerWorkspaceFolder}/.vscode/current/talosconfig"
+  },
+  "forwardPorts": [5900],
+  "portsAttributes": {
+    "5900": {
+      "label": "VNC (KubeVirt)",
+      "onAutoForward": "silent"
+    }
   },
   "remoteUser": "vscode",
   "postCreateCommand": ".devcontainer/install-tools.sh ${containerWorkspaceFolder}"

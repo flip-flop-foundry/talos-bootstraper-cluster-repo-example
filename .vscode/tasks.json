@@ -75,6 +75,19 @@
         "focus": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "Prepare Node for Downtime",
+      "type": "shell",
+      "command": "mkdir -p \"${workspaceFolder}/.vscode/current\" && echo -n \"${input:envFile}\" > \"${workspaceFolder}/.vscode/current/selected-env\" && ${workspaceFolder}/talos-bootstraper/.vscode/tasks/prepare-node-for-downtime.sh \"${input:envFile}\" \"${workspaceFolder}\"",
+      "group": "build",
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true,
+        "focus": true
+      },
+      "problemMatcher": []
     }
   ],
   "inputs": [
