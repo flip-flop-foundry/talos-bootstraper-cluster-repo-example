@@ -1,0 +1,124 @@
+# KubeVirt / virtctl plugins for k9s
+# Requires `virtctl` in PATH — https://kubevirt.io/user-guide/operations/virtctl_client_tool/
+
+plugins:
+
+  vm-console:
+    shortCut: Shift-C
+    description: "virtctl: Serial console"
+    scopes:
+    - virtualmachine
+    - virtualmachineinstance
+    command: virtctl
+    background: false
+    args:
+    - console
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+
+  vm-start:
+    shortCut: u
+    description: "virtctl: Start VM"
+    scopes:
+    - virtualmachine
+    command: virtctl
+    background: false
+    args:
+    - start
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+
+  vm-stop:
+    shortCut: t
+    description: "virtctl: Stop VM"
+    confirm: true
+    dangerous: true
+    scopes:
+    - virtualmachine
+    command: virtctl
+    background: false
+    args:
+    - stop
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+
+  vm-restart:
+    shortCut: r
+    description: "virtctl: Restart VM"
+    confirm: true
+    scopes:
+    - virtualmachine
+    command: virtctl
+    background: false
+    args:
+    - restart
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+
+  vm-ssh:
+    shortCut: s
+    description: "virtctl: SSH into VM"
+    scopes:
+    - virtualmachine
+    command: bash
+    background: false
+    args:
+    - -c
+    - "read -rp 'SSH username [ubuntu]: ' u; virtctl ssh --username=${u:-ubuntu} vm/$NAME --namespace=$NAMESPACE --context $CONTEXT"
+
+  vmi-ssh:
+    shortCut: s
+    description: "virtctl: SSH into VMI"
+    scopes:
+    - virtualmachineinstance
+    command: bash
+    background: false
+    args:
+    - -c
+    - "read -rp 'SSH username [ubuntu]: ' u; virtctl ssh --username=${u:-ubuntu} vmi/$NAME --namespace=$NAMESPACE --context $CONTEXT"
+
+  vm-vnc:
+    shortCut: Shift-V
+    description: "virtctl: VNC proxy → connect on localhost:5900"
+    scopes:
+    - virtualmachine
+    command: virtctl
+    background: true
+    args:
+    - vnc
+    - --proxy-only
+    - --port=5900
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT
+
+  vmi-vnc:
+    shortCut: Shift-V
+    description: "virtctl: VNC proxy → connect on localhost:5900"
+    scopes:
+    - virtualmachineinstance
+    command: virtctl
+    background: true
+    args:
+    - vnc
+    - --proxy-only
+    - --port=5900
+    - $NAME
+    - -n
+    - $NAMESPACE
+    - --context
+    - $CONTEXT

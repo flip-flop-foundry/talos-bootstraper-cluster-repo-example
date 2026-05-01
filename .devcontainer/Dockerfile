@@ -9,11 +9,13 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
         curl \
         git \
         bash-completion \
+        dnsutils \
+        iputils-ping \
+        htop \
         ca-certificates \
         gnupg \
         unzip \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
-
 # # --- Bitwarden CLI ---
 # RUN curl -fsSL "https://vault.bitwarden.com/download/?app=cli&platform=linux" -o /tmp/bw.zip \
 #     && unzip -o /tmp/bw.zip -d /usr/local/bin \
